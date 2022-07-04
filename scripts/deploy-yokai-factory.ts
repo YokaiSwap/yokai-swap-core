@@ -8,6 +8,8 @@ import {
   networkSuffix,
   initGWAccountIfNeeded,
   isGodwoken,
+  isGodwokenV0,
+  getGasPrice,
 } from "./common";
 
 import YokaiFactory from "../artifacts/contracts/YokaiFactory.sol/YokaiFactory.json";
@@ -29,8 +31,7 @@ interface IYokaiFactory extends Contract, IYokaiFactoryStaticMethods {
 
 const deployerAddress = deployer.address;
 const txOverrides = {
-  gasPrice: isGodwoken ? 0 : undefined,
-  gasLimit: isGodwoken ? 12_500_000 : undefined,
+  gasLimit: isGodwoken ? 500_000 : undefined,
 };
 
 async function main() {
@@ -38,8 +39,10 @@ async function main() {
 
   await initGWAccountIfNeeded(deployerAddress);
 
+  const gasPrice = await getGasPrice();
+
   let deployerRecipientAddress = deployerAddress;
-  if (isGodwoken) {
+  if (isGodwokenV0) {
     const { godwoker } = rpc as PolyjuiceJsonRpcProvider;
     deployerRecipientAddress =
       godwoker.computeShortAddressByEoaEthAddress(deployerAddress);
@@ -62,7 +65,7 @@ async function main() {
       const tx = implementationFactory.getDeployTransaction(
         deployerRecipientAddress,
       );
-      tx.gasPrice = txOverrides.gasPrice;
+      tx.gasPrice = gasPrice;
       tx.gasLimit = txOverrides.gasLimit;
       return deployer.sendTransaction(tx);
     },
@@ -76,10 +79,9 @@ async function main() {
     deployer,
   ) as IYokaiFactory;
   console.log(
-    "    INIT_CODE_PAIR_HASH:",
+    "    YokaiFactory.INIT_CODE_PAIR_HASH:",
     await yokaiFactory.callStatic.INIT_CODE_PAIR_HASH(),
   );
-  console.log("    feeToSetter:", await yokaiFactory.callStatic.feeToSetter());
 }
 
 main()
